@@ -1,65 +1,168 @@
-import Image from "next/image";
+"use client";
+
+import { useState, useEffect } from "react";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
+import {
+  Card,
+  CardHeader,
+  CardTitle,
+  CardDescription,
+  CardContent,
+  CardFooter,
+} from "@/components/ui/card";
+
+interface Note {
+  id: string;
+  title: string;
+  content: string;
+  created_at: string;
+}
 
 export default function Home() {
+  const [title, setTitle] = useState("");
+  const [content, setContent] = useState("");
+  const [notes, setNotes] = useState<Note[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [message, setMessage] = useState("");
+
+  useEffect(() => {
+    fetchNotes();
+  }, []);
+
+  async function fetchNotes() {
+    try {
+      const response = await fetch("/api/notes");
+      const data = await response.json();
+      if (Array.isArray(data)) {
+        setNotes(data);
+      }
+    } catch (error) {
+      console.error("Failed to fetch notes:", error);
+    }
+  }
+
+  async function handleSaveNote() {
+    if (!title.trim() || !content.trim()) {
+      setMessage("Please fill in both title and content.");
+      return;
+    }
+
+    setLoading(true);
+    setMessage("");
+
+    try {
+      const response = await fetch("/api/notes", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ title, content }),
+      });
+
+      if (!response.ok) {
+        throw new Error("Failed to save note");
+      }
+
+      setTitle("");
+      setContent("");
+      setMessage("Note saved successfully!");
+      fetchNotes();
+    } catch (error) {
+      setMessage("Failed to save note. Please try again.");
+    } finally {
+      setLoading(false);
+    }
+  }
+
   return (
-    <div className="flex min-h-screen items-center justify-center bg-zinc-50 font-sans dark:bg-black">
-      <main className="flex min-h-screen w-full max-w-3xl flex-col items-center justify-between py-32 px-16 bg-white dark:bg-black sm:items-start">
-        <Image
-          className="dark:invert"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={100}
-          height={20}
-          priority
-        />
-        <div className="flex flex-col items-center gap-6 text-center sm:items-start sm:text-left">
-          <h1 className="max-w-xs text-3xl font-semibold leading-10 tracking-tight text-black dark:text-zinc-50">
-            To get started, edit the page.tsx file.
-          </h1>
-          <p className="max-w-md text-lg leading-8 text-zinc-600 dark:text-zinc-400">
-            Looking for a starting point or more instructions? Head over to{" "}
-            <a
-              href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Templates
-            </a>{" "}
-            or the{" "}
-            <a
-              href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Learning
-            </a>{" "}
-            center.
-          </p>
+    <div className="min-h-screen bg-zinc-50 dark:bg-black">
+      <div className="mx-auto max-w-2xl px-6 py-12">
+        <h1 className="mb-2 text-3xl font-bold tracking-tight text-zinc-900 dark:text-zinc-50">
+          AI Second Brain
+        </h1>
+        <p className="mb-8 text-zinc-500 dark:text-zinc-400">
+          Save knowledge and retrieve it later using semantic search.
+        </p>
+
+        <Card className="mb-8">
+          <CardHeader>
+            <CardTitle>Add Note</CardTitle>
+            <CardDescription>
+              Save a note or article to your second brain.
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="flex flex-col gap-4">
+            <div>
+              <label className="mb-1 block text-sm font-medium text-zinc-700 dark:text-zinc-300">
+                Title
+              </label>
+              <Input
+                placeholder="Note title..."
+                value={title}
+                onChange={(e) => setTitle(e.target.value)}
+              />
+            </div>
+            <div>
+              <label className="mb-1 block text-sm font-medium text-zinc-700 dark:text-zinc-300">
+                Content
+              </label>
+              <Textarea
+                placeholder="Write your note or paste an article..."
+                value={content}
+                onChange={(e) => setContent(e.target.value)}
+                rows={6}
+              />
+            </div>
+          </CardContent>
+          <CardFooter className="flex items-center justify-between">
+            <Button onClick={handleSaveNote} disabled={loading}>
+              {loading ? "Saving..." : "Save Note"}
+            </Button>
+            {message && (
+              <p
+                className={`text-sm ${
+                  message.includes("successfully")
+                    ? "text-green-600"
+                    : "text-red-500"
+                }`}
+              >
+                {message}
+              </p>
+            )}
+          </CardFooter>
+        </Card>
+
+        <div>
+          <h2 className="mb-4 text-xl font-semibold text-zinc-900 dark:text-zinc-50">
+            Saved Notes
+          </h2>
+          {notes.length === 0 ? (
+            <p className="text-zinc-400">No notes saved yet.</p>
+          ) : (
+            <div className="flex flex-col gap-4">
+              {notes.map((note) => (
+                <Card key={note.id}>
+                  <CardHeader>
+                    <CardTitle>{note.title}</CardTitle>
+                    <CardDescription>
+                      {new Date(note.created_at).toLocaleDateString("en-US", {
+                        year: "numeric",
+                        month: "short",
+                        day: "numeric",
+                      })}
+                    </CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    <p className="whitespace-pre-wrap text-zinc-600 dark:text-zinc-400">
+                      {note.content}
+                    </p>
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
+          )}
         </div>
-        <div className="flex flex-col gap-4 text-base font-medium sm:flex-row">
-          <a
-            className="flex h-12 w-full items-center justify-center gap-2 rounded-full bg-foreground px-5 text-background transition-colors hover:bg-[#383838] dark:hover:bg-[#ccc] md:w-[158px]"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={16}
-              height={16}
-            />
-            Deploy Now
-          </a>
-          <a
-            className="flex h-12 w-full items-center justify-center rounded-full border border-solid border-black/[.08] px-5 transition-colors hover:border-transparent hover:bg-black/[.04] dark:border-white/[.145] dark:hover:bg-[#1a1a1a] md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Documentation
-          </a>
-        </div>
-      </main>
+      </div>
     </div>
   );
 }
