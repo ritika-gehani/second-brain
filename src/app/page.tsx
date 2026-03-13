@@ -12,6 +12,13 @@ import {
   CardContent,
   CardFooter,
 } from "@/components/ui/card";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 
 interface Note {
   id: string;
@@ -36,6 +43,8 @@ export default function Home() {
   const [query, setQuery] = useState("");
   const [searchResults, setSearchResults] = useState<SearchResult[]>([]);
   const [searching, setSearching] = useState(false);
+  const [noteType, setNoteType] = useState("text");
+  const [url, setUrl] = useState("");
 
   useEffect(() => {
     fetchNotes();
@@ -79,6 +88,37 @@ export default function Home() {
       fetchNotes();
     } catch (error) {
       setMessage("Failed to save note. Please try again.");
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  async function handleImportUrl() {
+    if (!url.trim()) {
+      setMessage("Please enter a URL.");
+      return;
+    }
+
+    setLoading(true);
+    setMessage("");
+
+    try {
+      const response = await fetch("/api/ingest/url", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ url }),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || "Failed to import URL");
+      }
+
+      setUrl("");
+      setMessage("Article imported successfully!");
+      fetchNotes();
+    } catch (error) {
+      setMessage(error instanceof Error ? error.message : "Failed to import article. Please try again.");
     } finally {
       setLoading(false);
     }
@@ -161,7 +201,7 @@ export default function Home() {
                     </CardDescription>
                   </CardHeader>
                   <CardContent>
-                    <p className="line-clamp-6 whitespace-pre-wrap text-sm text-zinc-600 dark:text-zinc-400">
+                    <p className="whitespace-pre-wrap text-sm text-zinc-600 dark:text-zinc-400">
                       {result.content}
                     </p>
                   </CardContent>
@@ -183,30 +223,81 @@ export default function Home() {
                 <CardContent className="flex flex-col gap-4">
                   <div>
                     <label className="mb-1 block text-sm font-medium text-zinc-700 dark:text-zinc-300">
-                      Title
+                      Note Type
                     </label>
-                    <Input
-                      placeholder="Note title..."
-                      value={title}
-                      onChange={(e) => setTitle(e.target.value)}
-                    />
+                    <Select value={noteType} onValueChange={setNoteType}>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select type" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="text">Text</SelectItem>
+                        <SelectItem value="url">URL Link</SelectItem>
+                        <SelectItem value="import">Import from App</SelectItem>
+                      </SelectContent>
+                    </Select>
                   </div>
-                  <div>
-                    <label className="mb-1 block text-sm font-medium text-zinc-700 dark:text-zinc-300">
-                      Content
-                    </label>
-                    <Textarea
-                      placeholder="Write your note or paste an article..."
-                      value={content}
-                      onChange={(e) => setContent(e.target.value)}
-                      rows={6}
-                    />
-                  </div>
+
+                  {noteType === "text" && (
+                    <>
+                      <div>
+                        <label className="mb-1 block text-sm font-medium text-zinc-700 dark:text-zinc-300">
+                          Title
+                        </label>
+                        <Input
+                          placeholder="Note title..."
+                          value={title}
+                          onChange={(e) => setTitle(e.target.value)}
+                        />
+                      </div>
+                      <div>
+                        <label className="mb-1 block text-sm font-medium text-zinc-700 dark:text-zinc-300">
+                          Content
+                        </label>
+                        <Textarea
+                          placeholder="Write your note or paste an article..."
+                          value={content}
+                          onChange={(e) => setContent(e.target.value)}
+                          rows={6}
+                        />
+                      </div>
+                    </>
+                  )}
+
+                  {noteType === "url" && (
+                    <div>
+                      <label className="mb-1 block text-sm font-medium text-zinc-700 dark:text-zinc-300">
+                        URL
+                      </label>
+                      <Input
+                        placeholder="https://example.com/article..."
+                        value={url}
+                        onChange={(e) => setUrl(e.target.value)}
+                      />
+                    </div>
+                  )}
+
+                  {noteType === "import" && (
+                    <p className="text-sm text-zinc-500">
+                      Import notes from Notion, Google Docs, or Twitter.
+                    </p>
+                  )}
                 </CardContent>
                 <CardFooter className="flex items-center justify-between">
-                  <Button onClick={handleSaveNote} disabled={loading}>
-                    {loading ? "Saving..." : "Save Note"}
-                  </Button>
+                  {noteType === "text" && (
+                    <Button onClick={handleSaveNote} disabled={loading}>
+                      {loading ? "Saving..." : "Save Note"}
+                    </Button>
+                  )}
+                  {noteType === "url" && (
+                    <Button onClick={handleImportUrl} disabled={loading || !url.trim()}>
+                      {loading ? "Importing..." : "Import from URL"}
+                    </Button>
+                  )}
+                  {noteType === "import" && (
+                    <Button disabled>
+                      Import
+                    </Button>
+                  )}
                   {message && (
                     <p
                       className={`text-sm ${
@@ -246,7 +337,7 @@ export default function Home() {
                         </CardDescription>
                       </CardHeader>
                       <CardContent>
-                        <p className="line-clamp-4 whitespace-pre-wrap text-sm text-zinc-600 dark:text-zinc-400">
+                        <p className="whitespace-pre-wrap text-sm text-zinc-600 dark:text-zinc-400">
                           {note.content}
                         </p>
                       </CardContent>
