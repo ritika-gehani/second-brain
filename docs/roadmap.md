@@ -30,61 +30,34 @@ The system retrieves the most relevant saved content.
 
 ---
 
-# Version 2 — Content Review
+# Version 2 — Content Ingestion
 
-One idea is to help users revisit saved knowledge instead of forgetting it.
+Goal:
 
-Possible features:
+Let users **ingest content from multiple sources** instead of only manual copy-paste.
 
-- mark notes as reviewed
-- review queue
-- reminders for saved content that hasn't been reviewed
-- store chunked text for longer content
-- store review metadata
+Features:
 
-Example:
+- paste an article URL → scrape text and save as a note
+- paste a YouTube URL → extract transcript and save as a note
+- upload a PDF → parse text and save as a note
+- connect Notion → import pages as notes
+- connect Google Docs → import documents as notes
+- connect Twitter/X → import bookmarked tweets and threads as notes
 
-"You saved this article two weeks ago but haven't reviewed it yet."
+All ingestion methods follow the same pattern:
 
----
-
-# Version 3 — Learning Tools
-
-Another idea is to generate learning tools from saved content.
-
-Possible features:
-
-- summaries
-- quiz questions
-- reflection prompts
-
-Example output:
-
-Summary  
-Vector embeddings convert text into numerical vectors used for semantic similarity search.
-
-Question  
-Why are embeddings required for vector search?
-
----
-
-# Version 4 — Idea Generation
-
-The system could analyze stored knowledge and suggest new ideas.
-
-Possible features:
-
-- project ideas
-- writing prompts
-- research connections
+Source → Extract text → Generate embedding → Store in Supabase → Searchable
 
 Example:
 
-"You have saved several notes about RAG systems and developer tooling. You could build a tool that helps debug AI pipelines."
+User pastes: `https://www.youtube.com/watch?v=abc123`
+
+The system extracts the video transcript, generates an embedding, and saves it as a searchable note.
 
 ---
 
-# Version 5 — Knowledge Connections
+# Version 3 — Knowledge Connections
 
 Another possible direction is connecting related concepts together.
 
