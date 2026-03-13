@@ -20,12 +20,22 @@ interface Note {
   created_at: string;
 }
 
+interface SearchResult {
+  id: string;
+  title: string;
+  content: string;
+  similarity: number;
+}
+
 export default function Home() {
   const [title, setTitle] = useState("");
   const [content, setContent] = useState("");
   const [notes, setNotes] = useState<Note[]>([]);
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState("");
+  const [query, setQuery] = useState("");
+  const [searchResults, setSearchResults] = useState<SearchResult[]>([]);
+  const [searching, setSearching] = useState(false);
 
   useEffect(() => {
     fetchNotes();
@@ -71,6 +81,34 @@ export default function Home() {
       setMessage("Failed to save note. Please try again.");
     } finally {
       setLoading(false);
+    }
+  }
+
+  async function handleSearch() {
+    if (!query.trim()) {
+      return;
+    }
+
+    setSearching(true);
+    setSearchResults([]);
+
+    try {
+      const response = await fetch("/api/search", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ query }),
+      });
+
+      if (!response.ok) {
+        throw new Error("Failed to search");
+      }
+
+      const data = await response.json();
+      setSearchResults(data);
+    } catch (error) {
+      console.error("Search failed:", error);
+    } finally {
+      setSearching(false);
     }
   }
 
@@ -130,6 +168,50 @@ export default function Home() {
               </p>
             )}
           </CardFooter>
+        </Card>
+
+        <Card className="mb-8">
+          <CardHeader>
+            <CardTitle>Search Your Notes</CardTitle>
+            <CardDescription>
+              Find notes by meaning, not just keywords.
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="flex gap-2">
+              <Input
+                placeholder="What do you want to find?"
+                value={query}
+                onChange={(e) => setQuery(e.target.value)}
+                onKeyDown={(e) => e.key === "Enter" && handleSearch()}
+              />
+              <Button onClick={handleSearch} disabled={searching}>
+                {searching ? "Searching..." : "Search"}
+              </Button>
+            </div>
+          </CardContent>
+          {searchResults.length > 0 && (
+            <CardFooter className="flex flex-col gap-3">
+              <p className="w-full text-sm font-medium text-zinc-500">
+                Top {searchResults.length} results:
+              </p>
+              {searchResults.map((result) => (
+                <Card key={result.id} className="w-full">
+                  <CardHeader>
+                    <CardTitle>{result.title}</CardTitle>
+                    <CardDescription>
+                      {Math.round(result.similarity * 100)}% match
+                    </CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    <p className="whitespace-pre-wrap text-zinc-600 dark:text-zinc-400">
+                      {result.content}
+                    </p>
+                  </CardContent>
+                </Card>
+              ))}
+            </CardFooter>
+          )}
         </Card>
 
         <div>

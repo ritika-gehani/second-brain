@@ -25,8 +25,14 @@ export async function POST(request: NextRequest) {
       throw error;
     }
 
-    return NextResponse.json(data);
+    // Only return results with similarity above 30%
+    const filteredResults = data.filter(
+      (result: { similarity: number }) => result.similarity > 0.3
+    );
+
+    return NextResponse.json(filteredResults);
   } catch (error) {
+    console.error("Search error:", error);
     return NextResponse.json(
       { error: "Failed to search notes" },
       { status: 500 }
